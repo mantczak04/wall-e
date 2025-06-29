@@ -83,7 +83,7 @@ def process_match(demo_path: Path) -> dict[str, pl.DataFrame]:
     rounds_df = features.table_processing.fix_bomb_sites(rounds_df, dem.events.get('bomb_planted', pl.DataFrame()))
 
     # Create match_id
-    matches_df = tables.create_table.create_matches_table(demo_path, dem.header['map_name'])
+    matches_df = tables.create_table.create_matches_table(demo_path, dem.header['map_name'], ticks_df)
     match_id = matches_df.select('match_id').item()  # wyciąga pojedynczy string match_id
 
     # Generate tables
@@ -124,6 +124,7 @@ def process_match(demo_path: Path) -> dict[str, pl.DataFrame]:
         "damages": add_match_id(damages_df),
         "kills": add_match_id(kills_df),
         "game_state": add_match_id(game_state_df),
+        "bomb_events": add_match_id(bomb_events_df),
         "entry_kills": add_match_id(entry_kills_df),
         "shots": add_match_id(shots_df),
         "he_grenades": add_match_id(he_grenades_df),

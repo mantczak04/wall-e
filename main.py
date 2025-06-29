@@ -7,7 +7,7 @@ import utils
 
 def main():
     db_path = 'walle-database.duckdb'
-    demo_dir = Path("D:/parserdb/8045/")
+    demo_dir = Path("D:/walle-demos/7902/")
     demo_files = list(demo_dir.glob("*.dem"))
     files_quantity = len(demo_files)
 

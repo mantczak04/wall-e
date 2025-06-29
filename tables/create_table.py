@@ -231,19 +231,18 @@ def create_flashbangs_table(parser: DemoParser) -> pl.DataFrame:
         pl.col("z").alias("detonation_z")
     )
 
-def create_matches_table(demo_path: Path, map_name: str) -> pl.DataFrame:
-    parsed_at    = datetime.now()
+def create_matches_table(demo_path: Path, map_name: str, ticks_df: pl.DataFrame) -> pl.DataFrame:
+    date = datetime.fromtimestamp(demo_path.stat().st_mtime)
     tournament_id= demo_path.parent.name
-    base         = demo_path.stem
 
-    team1, team2 = utils.extract_teams(base)
+    team1, team2 = ticks_df.select('team_clan_name').unique().to_series().to_list()
 
     match_id = utils.create_match_id(tournament_id, map_name, team1, team2)
 
     return pl.DataFrame({
         "match_id":      [match_id],
         "tournament_id": [tournament_id],
-        "parsed_at":     [parsed_at],
+        "date":     [date],
         "team1":         [team1],
         "team2":         [team2],
         "map_name":      [map_name]
