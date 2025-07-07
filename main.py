@@ -1,23 +1,45 @@
-from awpy import Demo
-import polars as pl
+import concurrent.futures
 from pathlib import Path
-from features import table_processing
-from demoparser2 import DemoParser
-import utils
+
+import duckdb
+
+import config
+from src.wall_e import load, pipeline
+
 
 def main():
-    db_path = 'walle-database.duckdb'
-    demo_dir = Path("D:/walle-demos/7902/")
+    db_path = config.DATABASE_PATH
+    demo_dir = Path(config.DEMO_DIRECTORY_PATH)
     demo_files = list(demo_dir.glob("*.dem"))
     files_quantity = len(demo_files)
 
-    for id, demo_path in enumerate(demo_files):
-        try:
-            print(f'[{id+1}/{files_quantity}] parsing {demo_path}...')
-            dfs = utils.process_match(demo_path)
-            utils.save_to_duckdb(dfs, db_path)
-        except Exception as e:
-            print(f"Error processing {demo_path.name}: {e}")
+    print(f"Found {files_quantity} demo files to process.")
 
-if __name__ == '__main__':
+    con = duckdb.connect(db_path)
+    try:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=config.MAX_WORKERS) as executor:
+            # Submit all demo processing tasks to the pool
+            future_to_demo = {
+                executor.submit(pipeline.process_demo, demo_path): demo_path
+                for demo_path in demo_files
+            }
+
+            for i, future in enumerate(concurrent.futures.as_completed(future_to_demo)):
+                demo_path = future_to_demo[future]
+                try:
+                    print(f"[{i+1}/{files_quantity}] Processing {demo_path.name}...")
+                    processed_dfs = future.result()
+
+                    print(f"[{i+1}/{files_quantity}] Saving data for {demo_path.name} to DuckDB...")
+                    load.save_to_duckdb(processed_dfs, con)
+                    print(f"[{i+1}/{files_quantity}] Successfully saved {demo_path.name}.")
+
+                except Exception as e:
+                    print(f"Error processing {demo_path.name}: {e}. Skipping this file.")
+    finally:
+        con.close()
+        print("\nDatabase connection closed. Pipeline finished.")
+
+
+if __name__ == "__main__":
     main()
